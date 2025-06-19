@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PsicoTrader</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212; /* Fundo bem escuro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            background-color: #1f1f1f; /* Fundo do container escuro */
+            border-radius: 1rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6); /* Sombra mais profunda */
+            padding: 2rem;
+            max-width: 600px; /* Largura máxima do container diminuída */
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px; /* Altura mínima da caixa de texto diminuída */
+            background-color: #2c2c2c; /* Fundo da caixa de texto escuro */
+            border-color: #4a4a4a; /* Borda da caixa de texto */
+            color: #FFFFFF !important; /* Cor do texto alterada para branco puro e !important para forçar */
+        }
+        textarea:focus {
+            border-color: #6a0dad; /* Cor vibrante no foco da caixa de texto */
+            box-shadow: 0 0 0 3px rgba(106, 13, 173, 0.5); /* Sombra de foco vibrante */
+        }
+        button {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            background-color: #6a0dad; /* Cor principal do botão: igual à cor de hover */
+        }
+        button:hover {
+            background-color: #6a0dad; /* Hover do botão: roxo mais escuro e intenso (mantido) */
+            transform: translateY(-2px); /* Efeito sutil de levantar */
+        }
+        button:active {
+            transform: translateY(0); /* Retorna ao estado normal ao clicar */
+        }
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .loading-indicator.active {
+            display: block;
+        }
+        .loading-indicator .animate-spin {
+            border-color: #8a2be2 transparent #8a2be2 transparent; /* Spinner vibrante */
+        }
+        #responseDisplay {
+            background-color: #2c2c2c; /* Fundo da resposta escuro */
+            border-color: #4a4a4a; /* Borda da resposta */
+            color: #e0e0e0; /* Texto da resposta claro */
+            display: none; /* Inicialmente oculto */
+        }
+        h1 {
+            color: #e0e0e0; /* Título claro */
+        }
+        p {
+            color: #b0b0b0; /* Parágrafo um pouco mais suave */
+        }
+
+        /* Custom message box for alerts */
+        .message-box {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #1f1f1f; /* Fundo da caixa de mensagem escuro */
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6); /* Sombra da caixa de mensagem */
+            z-index: 1000;
+            text-align: center;
+            color: #f0f0f0; /* Texto da caixa de mensagem claro */
+        }
+        .message-box button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #8a2be2; /* Botão da caixa de mensagem */
+            color: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            border: none;
+        }
+        .message-box button:hover {
+            background-color: #6a0dad;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-4">Psicologia de Mercado</h1>
+        <p class="mb-6">Digite sua dúvida sobre psicologia de mercado e eu tentarei te ajudar a entender melhor.</p>
+
+        <textarea
+            id="doubtInput"
+            class="w-full p-4 border rounded-lg focus:outline-none focus:ring-2"
+            placeholder="Ex: Como o medo afeta minhas decisões de investimento?"
+        ></textarea>
+
+        <button
+            id="submitButton"
+            class="w-full text-white font-semibold py-3 px-6 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+            Clique Para Gerar Resposta
+        </button>
+
+        <div id="loadingIndicator" class="loading-indicator">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto"></div>
+            <p class="text-gray-400 mt-2">Pensando...</p>
+        </div>
+
+        <div
+            id="responseDisplay"
+            class="p-6 rounded-lg border text-left break-words whitespace-pre-wrap"
+        >
+            <!-- A resposta aparecerá aqui depois de ser gerada -->
+        </div>
+
+        <!-- Custom Message Box -->
+        <div id="messageBox" class="message-box">
+            <p id="messageText"></p>
+            <button onclick="document.getElementById('messageBox').style.display = 'none';">Fechar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+        // Firebase configuration (provided by the Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let auth;
+        let db;
+        let userId = 'anonymous'; // Default to anonymous
+
+        // Function to display custom messages
+        function showMessage(text) {
+            document.getElementById('messageText').innerText = text;
+            document.getElementById('messageBox').style.display = 'block';
+        }
+
+        async function initializeFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log('Usuário autenticado:', userId);
+                    } else {
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                            userId = auth.currentUser?.uid || crypto.randomUUID();
+                            console.log('Usuário autenticado/anônimo:', userId);
+                        } catch (error) {
+                            console.error("Erro na autenticação Firebase:", error);
+                            showMessage("Erro ao iniciar a sessão. Por favor, tente novamente.");
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Erro ao inicializar Firebase:", error);
+                showMessage("Erro ao inicializar o sistema. Por favor, tente recarregar a página.");
+            }
+        }
+
+        initializeFirebase();
+
+        const doubtInput = document.getElementById('doubtInput');
+        const submitButton = document.getElementById('submitButton');
+        const responseDisplay = document.getElementById('responseDisplay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // Function to handle sending the prompt
+        async function sendPrompt() {
+            const prompt = doubtInput.value.trim();
+            if (!prompt) {
+                showMessage("Por favor, digite sua dúvida antes de enviar.");
+                return;
+            }
+
+            loadingIndicator.classList.add('active');
+            responseDisplay.innerText = ''; // Limpa a resposta anterior
+            responseDisplay.style.display = 'none'; // Esconde a área de resposta enquanto carrega
+            submitButton.disabled = true;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `A partir de uma perspectiva de psicologia de mercado, responda à seguinte dúvida: "${prompt}"` }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will provide this key at runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    responseDisplay.innerText = text;
+                    responseDisplay.style.display = 'block'; // Mostra a área de resposta
+                } else {
+                    responseDisplay.innerText = 'Não foi possível gerar uma resposta. Tente novamente.';
+                    responseDisplay.style.display = 'block'; // Mostra a área de resposta mesmo em caso de erro
+                    console.error('Estrutura de resposta inesperada:', result);
+                    showMessage("Não foi possível processar a resposta do servidor. Tente novamente.");
+                }
+            } catch (error) {
+                console.error('Erro ao chamar a API Gemini:', error);
+                responseDisplay.innerText = 'Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.';
+                responseDisplay.style.display = 'block'; // Mostra a área de resposta mesmo em caso de erro
+                showMessage("Erro de conexão ou servidor. Por favor, tente novamente.");
+            } finally {
+                loadingIndicator.classList.remove('active');
+                submitButton.disabled = false;
+            }
+        }
+
+        // Event listener for button click
+        submitButton.addEventListener('click', sendPrompt);
+
+        // Event listener for "Enter" key press on the textarea
+        doubtInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) { // Check for Enter key without Shift
+                event.preventDefault(); // Prevent new line in textarea
+                sendPrompt();
+            }
+        });
+    </script>
+</body>
+</html>
