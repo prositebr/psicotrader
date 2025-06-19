@@ -153,20 +153,31 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
 
-        // Firebase configuration (provided by the Canvas environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // IMPORTANTE: Para hospedar no GitHub Pages, você DEVE substituir estes placeholders
+        // pelos detalhes do seu próprio projeto Firebase.
+        // Crie um projeto em console.firebase.google.com e obtenha suas credenciais.
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY", // <--- SUBSTITUA ESTA LINHA COM SUA CHAVE API REAL DO FIREBASE
+            authDomain: "YOUR_AUTH_DOMAIN", // Ex: "seu-projeto.firebaseapp.com"
+            projectId: "YOUR_PROJECT_ID", // Ex: "seu-projeto-id"
+            storageBucket: "YOUR_STORAGE_BUCKET", // Ex: "seu-projeto.appspot.com"
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Ex: "1234567890"
+            appId: "YOUR_APP_ID" // Ex: "1:1234567890:web:abcdef1234567890"
+        };
+
+        // Para GitHub Pages, não usamos tokens de autenticação personalizados do ambiente Canvas.
+        // Usaremos o login anónimo como padrão.
+        const initialAuthToken = null; // Mantido como null
 
         let app;
         let auth;
         let db;
-        let userId = 'anonymous'; // Default to anonymous
+        let userId = 'anonymous'; // Padrão para anónimo
 
-        // Function to display custom messages
+        // Função para exibir mensagens personalizadas
         function showMessage(text) {
             document.getElementById('messageText').innerText = text;
             document.getElementById('messageBox').style.display = 'block';
@@ -174,6 +185,13 @@
 
         async function initializeFirebase() {
             try {
+                // Verificar se a API Key foi fornecida antes de inicializar o Firebase
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    console.error("ERRO: Firebase API Key não fornecida ou é o placeholder. O Firebase não será inicializado.");
+                    showMessage("Erro: Chave API do Firebase não configurada. Por favor, edite o código com sua chave real.");
+                    return; // Interrompe a inicialização se a chave não for válida
+                }
+
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
@@ -181,25 +199,22 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        console.log('Usuário autenticado:', userId);
+                        console.log('Utilizador autenticado:', userId);
                     } else {
                         try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
+                            // Tenta login anónimo para GitHub Pages
+                            await signInAnonymously(auth);
                             userId = auth.currentUser?.uid || crypto.randomUUID();
-                            console.log('Usuário autenticado/anônimo:', userId);
+                            console.log('Utilizador autenticado/anónimo:', userId);
                         } catch (error) {
                             console.error("Erro na autenticação Firebase:", error);
-                            showMessage("Erro ao iniciar a sessão. Por favor, tente novamente.");
+                            showMessage("Erro ao iniciar a sessão. Por favor, verifique a sua chave API do Firebase e as configurações de autenticação no Firebase Console. Detalhes: " + error.message);
                         }
                     }
                 });
             } catch (error) {
                 console.error("Erro ao inicializar Firebase:", error);
-                showMessage("Erro ao inicializar o sistema. Por favor, tente recarregar a página.");
+                showMessage("Erro ao inicializar o sistema. Por favor, verifique se a configuração do Firebase está correta no código. Detalhes: " + error.message);
             }
         }
 
@@ -210,11 +225,11 @@
         const responseDisplay = document.getElementById('responseDisplay');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
-        // Function to handle sending the prompt
+        // Função para lidar com o envio da solicitação
         async function sendPrompt() {
             const prompt = doubtInput.value.trim();
             if (!prompt) {
-                showMessage("Por favor, digite sua dúvida antes de enviar.");
+                showMessage("Por favor, digite a sua dúvida antes de enviar.");
                 return;
             }
 
@@ -225,11 +240,19 @@
 
             try {
                 let chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: `A partir de uma perspectiva de psicologia de mercado, responda à seguinte dúvida: "${prompt}"` }] });
+                chatHistory.push({ role: "user", parts: [{ text: `A partir de uma perspetiva de psicologia de mercado, responda à seguinte dúvida: "${prompt}"` }] });
 
-                const payload = { contents: chatHistory };
-                const apiKey = "AIzaSyBMatBgSnVQoVGLBD5XcvYfSnKSDAbi4WY"; // Canvas will provide this key at runtime
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                // IMPORTANTE: Se hospedar no GitHub Pages, você DEVE substituir esta apiKey
+                // por uma chave da API Google Cloud com acesso à API Gemini.
+                // Obtenha uma em console.cloud.google.com -> APIs & Services -> Credentials
+                const geminiApiKey = "AIzaSyBMatBgSnVQoVGLBD5XcvYfSnKSDAbi4WY"; // <--- SUBSTITUA ESTA LINHA COM SUA CHAVE API REAL DO GEMINI
+                
+                // Verificar se a API Key do Gemini foi fornecida
+                if (!geminiApiKey || geminiApiKey === "") {
+                    throw new Error("API Key do Gemini não configurada. Por favor, edite o código com sua chave real.");
+                }
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -253,22 +276,22 @@
                 }
             } catch (error) {
                 console.error('Erro ao chamar a API Gemini:', error);
-                responseDisplay.innerText = 'Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.';
+                responseDisplay.innerText = `Ocorreu um erro ao processar a sua solicitação: ${error.message}. Por favor, tente novamente.`;
                 responseDisplay.style.display = 'block'; // Mostra a área de resposta mesmo em caso de erro
-                showMessage("Erro de conexão ou servidor. Por favor, tente novamente.");
+                showMessage(`Erro de conexão ou servidor: ${error.message}. Por favor, tente novamente.`);
             } finally {
                 loadingIndicator.classList.remove('active');
                 submitButton.disabled = false;
             }
         }
 
-        // Event listener for button click
+        // Listener de evento para o clique do botão
         submitButton.addEventListener('click', sendPrompt);
 
-        // Event listener for "Enter" key press on the textarea
+        // Listener de evento para a tecla "Enter" pressionada na área de texto
         doubtInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && !event.shiftKey) { // Check for Enter key without Shift
-                event.preventDefault(); // Prevent new line in textarea
+            if (event.key === 'Enter' && !event.shiftKey) { // Verifica a tecla Enter sem a tecla Shift
+                event.preventDefault(); // Impede uma nova linha na área de texto
                 sendPrompt();
             }
         });
