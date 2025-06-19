@@ -45,21 +45,32 @@
             background-color: #2c2c2c; /* Fundo da caixa de texto escuro */
             border-color: #4a4a4a; /* Borda da caixa de texto */
             color: #FFFFFF !important; /* Cor do texto alterada para branco puro e !important para forçar */
+            padding: 1rem; /* Adicionado padding para melhor espaçamento do texto */
         }
         textarea:focus {
             border-color: #6a0dad; /* Cor vibrante no foco da caixa de texto */
             box-shadow: 0 0 0 3px rgba(106, 13, 173, 0.5); /* Sombra de foco vibrante */
+            outline: none; /* Remove outline padrão do navegador */
         }
         button {
             transition: background-color 0.3s ease, transform 0.2s ease;
-            background-color: #6a0dad; /* Cor principal do botão: igual à cor de hover */
+            background-color: #6a0dad; /* Cor principal do botão: igual à cor de hover (roxo escuro) */
+            padding: 0.75rem 1.5rem; /* Ajuste do padding do botão */
+            font-size: 1.125rem; /* Tamanho da fonte maior para o botão */
+            font-weight: 600; /* Bold */
+            border-radius: 0.75rem; /* Cantos mais arredondados */
+            color: #ffffff !important; /* FORÇADO: Texto branco para o botão */
+            cursor: pointer;
+            border: none;
         }
         button:hover {
-            background-color: #6a0dad; /* Hover do botão: roxo mais escuro e intenso (mantido) */
-            transform: translateY(-2px); /* Efeito sutil de levantar */
+            background-color: #5b0a96; /* Hover do botão: um roxo ainda mais escuro e intenso */
+            transform: translateY(-3px); /* Efeito sutil de levantar mais */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Sombra no hover */
         }
         button:active {
             transform: translateY(0); /* Retorna ao estado normal ao clicar */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Sombra menor no clique */
         }
         .loading-indicator {
             display: none;
@@ -77,6 +88,10 @@
             border-color: #4a4a4a; /* Borda da resposta */
             color: #e0e0e0; /* Texto da resposta claro */
             display: none; /* Inicialmente oculto */
+            text-align: left; /* Alinhamento do texto da resposta */
+            padding: 1.5rem; /* Espaçamento da resposta */
+            border-radius: 0.75rem; /* Cantos arredondados */
+            line-height: 1.6; /* Espaçamento de linha para melhor leitura */
         }
         h1 {
             color: #e0e0e0; /* Título claro */
@@ -121,13 +136,13 @@
 
         <textarea
             id="doubtInput"
-            class="w-full p-4 border rounded-lg focus:outline-none focus:ring-2"
+            class="w-full border rounded-lg focus:outline-none focus:ring-2"
             placeholder="Ex: Como o medo afeta minhas decisões de investimento?"
         ></textarea>
 
         <button
             id="submitButton"
-            class="w-full text-white font-semibold py-3 px-6 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
             Clique Para Gerar Resposta
         </button>
@@ -151,79 +166,26 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
-
-        // IMPORTANTE: Para hospedar no GitHub Pages, você DEVE substituir estes placeholders
-        // pelos detalhes do seu próprio projeto Firebase.
-        // Crie um projeto em console.firebase.google.com e obtenha suas credenciais.
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // <--- SUBSTITUA ESTA LINHA COM SUA CHAVE API REAL DO FIREBASE
-            authDomain: "YOUR_AUTH_DOMAIN", // Ex: "seu-projeto.firebaseapp.com"
-            projectId: "YOUR_PROJECT_ID", // Ex: "seu-projeto-id"
-            storageBucket: "YOUR_STORAGE_BUCKET", // Ex: "seu-projeto.appspot.com"
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Ex: "1234567890"
-            appId: "YOUR_APP_ID" // Ex: "1:1234567890:web:abcdef1234567890"
-        };
-
-        // Para GitHub Pages, não usamos tokens de autenticação personalizados do ambiente Canvas.
-        // Usaremos o login anónimo como padrão.
-        const initialAuthToken = null; // Mantido como null
-
-        let app;
-        let auth;
-        let db;
-        let userId = 'anonymous'; // Padrão para anónimo
-
-        // Função para exibir mensagens personalizadas
-        function showMessage(text) {
-            document.getElementById('messageText').innerText = text;
-            document.getElementById('messageBox').style.display = 'block';
-        }
-
-        async function initializeFirebase() {
-            try {
-                // Verificar se a API Key foi fornecida antes de inicializar o Firebase
-                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    console.error("ERRO: Firebase API Key não fornecida ou é o placeholder. O Firebase não será inicializado.");
-                    showMessage("Erro: Chave API do Firebase não configurada. Por favor, edite o código com sua chave real.");
-                    return; // Interrompe a inicialização se a chave não for válida
-                }
-
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        console.log('Utilizador autenticado:', userId);
-                    } else {
-                        try {
-                            // Tenta login anónimo para GitHub Pages
-                            await signInAnonymously(auth);
-                            userId = auth.currentUser?.uid || crypto.randomUUID();
-                            console.log('Utilizador autenticado/anónimo:', userId);
-                        } catch (error) {
-                            console.error("Erro na autenticação Firebase:", error);
-                            showMessage("Erro ao iniciar a sessão. Por favor, verifique a sua chave API do Firebase e as configurações de autenticação no Firebase Console. Detalhes: " + error.message);
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Erro ao inicializar Firebase:", error);
-                showMessage("Erro ao inicializar o sistema. Por favor, verifique se a configuração do Firebase está correta no código. Detalhes: " + error.message);
-            }
-        }
-
-        initializeFirebase();
+    <script>
+        // ********************************************************************************
+        // IMPORTANTE: VOCÊ DEVE INSERIR SUA CHAVE API DO GEMINI AQUI.
+        // Obtenha uma chave em console.cloud.google.com -> APIs & Services -> Credentials
+        // Certifique-se de que a API Gemini esteja ativada no seu projeto.
+        // ********************************************************************************
+        const geminiApiKey = "AIzaSyBMatBgSnVQoVGLBD5XcvYfSnKSDAbi4WY"; // Sua chave API do Gemini
 
         const doubtInput = document.getElementById('doubtInput');
         const submitButton = document.getElementById('submitButton');
         const responseDisplay = document.getElementById('responseDisplay');
         const loadingIndicator = document.getElementById('loadingIndicator');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+
+        // Função para exibir mensagens personalizadas
+        function showMessage(text) {
+            messageText.innerText = text;
+            messageBox.style.display = 'block';
+        }
 
         // Função para lidar com o envio da solicitação
         async function sendPrompt() {
@@ -233,25 +195,22 @@
                 return;
             }
 
+            // Exibir indicador de carregamento e desabilitar botão
             loadingIndicator.classList.add('active');
             responseDisplay.innerText = ''; // Limpa a resposta anterior
             responseDisplay.style.display = 'none'; // Esconde a área de resposta enquanto carrega
             submitButton.disabled = true;
 
             try {
-                let chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: `A partir de uma perspetiva de psicologia de mercado, responda à seguinte dúvida: "${prompt}"` }] });
-
-                // IMPORTANTE: Se hospedar no GitHub Pages, você DEVE substituir esta apiKey
-                // por uma chave da API Google Cloud com acesso à API Gemini.
-                // Obtenha uma em console.cloud.google.com -> APIs & Services -> Credentials
-                const geminiApiKey = "AIzaSyBMatBgSnVQoVGLBD5XcvYfSnKSDAbi4WY"; // <--- SUBSTITUA ESTA LINHA COM SUA CHAVE API REAL DO GEMINI
-                
                 // Verificar se a API Key do Gemini foi fornecida
-                if (!geminiApiKey || geminiApiKey === "") {
+                if (!geminiApiKey || geminiApiKey === "YOUR_GEMINI_API_KEY" || geminiApiKey === "") {
                     throw new Error("API Key do Gemini não configurada. Por favor, edite o código com sua chave real.");
                 }
 
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `A partir de uma perspetiva de psicologia de mercado, responda à seguinte dúvida: "${prompt}"` }] });
+
+                const payload = { contents: chatHistory };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(apiUrl, {
@@ -259,6 +218,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Erro da API: ${response.status} - ${errorData.error.message || 'Erro desconhecido'}`);
+                }
 
                 const result = await response.json();
 
@@ -280,6 +244,7 @@
                 responseDisplay.style.display = 'block'; // Mostra a área de resposta mesmo em caso de erro
                 showMessage(`Erro de conexão ou servidor: ${error.message}. Por favor, tente novamente.`);
             } finally {
+                // Esconder indicador de carregamento e reabilitar botão
                 loadingIndicator.classList.remove('active');
                 submitButton.disabled = false;
             }
